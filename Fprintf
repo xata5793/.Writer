@@ -1,0 +1,52 @@
+"context"
+        "fmt"
+        "io"
+
+        automl "cloud.google.com/go/automl/apiv1"
+        "cloud.google.com/go/automl/apiv1/automlpb"
+        "google.golang.org/api/iterator"
+)
+
+// listDatasets lists existing datasets.
+func listDatasets(w io.Writer, projectID string, location string) error {
+        // projectID := "my-project-id"
+        // location := "us-central1"
+
+        ctx := context.Background()
+        client, err := automl.NewClient(ctx)
+        if err != nil {
+                return fmt.Errorf("NewClient: %w", err)
+        }
+        defer client.Close()
+
+        req := &automlpb.ListDatasetsRequest{
+                Parent: fmt.Sprintf("projects/%s/locations/%s", projectID, location),
+        }
+
+        it := client.ListDatasets(ctx, req)
+
+        // Iterate over all results
+        for {
+                dataset, err := it.Next()
+                if err == iterator.Done {
+                        break
+                }
+                if err != nil {
+                        return fmt.Errorf("ListGlossaries.Next: %w", err)
+                }
+
+                fmt.Fprintf(w, "Dataset name: %v\n", dataset.GetName())
+                fmt.Fprintf(w, "Dataset display name: %v\n", dataset.GetDisplayName())
+                fmt.Fprintf(w, "Dataset create time:\n")
+                fmt.Fprintf(w, "\tseconds: %v\n", dataset.GetCreateTime().GetSeconds())
+                fmt.Fprintf(w, "\tnanos: %v\n", dataset.GetCreateTime().GetNanos())
+
+                // Language text classification
+                if metadata := dataset.GetTextClassificationDatasetMetadata(); metadata != nil {
+                        fmt.Fprintf(w, "Text classification dataset metadata: %v\n", metadata)
+                }
+
+        }
+
+        return nil
+}
